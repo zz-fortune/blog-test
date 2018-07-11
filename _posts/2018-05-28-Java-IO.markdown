@@ -1,0 +1,442 @@
+---
+layout:    post
+title:    "Java I/O 的一点学习记录"
+subtitle:    "introduction to Java I/O"
+date:    2018-05-27 18:00:00
+catalog:    true
+tags:
+    - java
+    - 学习记录
+---
+
+一个程序必然是会和外界发生数据交换的，在这个学期的学习中，我也多次使
+用了 java I/O 来从文件中或者是是键盘上获取数据。在这里记录一下关于 
+Java I/O 的一点理解，主要是从文件的读写出发。
+
+#### **1、java.io 包的一点理解**
+这个包中的 I/O 策略采取的是一种称为阻塞式 
+I/O，简单的讲，就是当一个线程调用read() 或 
+write()时，该线程被阻塞，直到有一些数据被读取，或数据完全写入。该线
+程在此期间不能再干任何事情了。
+##### **1.1、Java I/O 中的数据流**
+Java 所有的 I/O 操作都是基于数据流进行的，因此，有必要先了解一下数据流的相关的问题。
+> 数据流是一组有序的、有起始点的数据序列。
+
+数据在计算机中的存储形式就是一组0和1组成的数码串，在传输数据时，本质
+上就是在传输一个这样的数码串。以读文件为例，将存储在磁盘上的文件内容
+读取到内存中，首先就是在内存和磁盘之间建立一个数据传输的通道，然后文
+件的内容按顺序以编码串的形式经过通道传递到内存中，然后在内存中又可以
+将编码串按顺序还原成文件的内容。通俗的看，可以将数据流看成一个在管道
+中传输的“水流”，“水流”从管道的一端进入，从管道的另一端流出。  
+
+尽管在传输时本质上是一个01编码串，但是在编码时，往往很多位01才能编码
+一个符号，为了方便，我们常常将编码串分组，每组就是数据流中的一个最小
+的数据单元：
+> 1) 字节流：最小的数据单元是字节。  
+> 2) 字符流：最小的数据单元是以 Unicode 编码的两个字节的字符。
+
+数据流还可以按照传输的方向分类，从内存传输到外部的数据流称为输出流（
+例如从内存写入文件的数据流）；反之，称为输入流。
+
+##### **1.2、java.io 包中大体结构**
+
+java.io 这个包中有87个不同的类和接口，但是最主要的有5个类和1个接口：  
+* `File`: 操作文件或者目录的描述信息，包括生成新目录、修改文件名、
+删除文件、判断文件所在路径等。   
+* `OutputStream`: 这是一个抽象类，用以描述一个二进制格式的字节流，是所
+有字节输出流的父类。  
+* `InputStream`: 这是一个抽象类，用以描述一个二进制格式的字节流，是所
+有字节输入流的父类。  
+* `Writer`: 这是一个抽象类，用以描述文本格式的字符流、输出流。  
+* `Reader`: 这是一个抽象类，用以描述文本格式的字符流、输入流。  
+* `Serializable`：接口，用于随机文件操作，可从文件的任意位置进行存取。  
+
+剩余的81个类和接口中，除了一些辅助的类和接口，其余的类均是以上5个类
+和一个接口的子类。java.io 的结构如下图：
+![java.io 包的总体结构](/img/post/IO-picture.png)
+这里我主要是关注流式部分，在 java.io 这个包里，有很多派生的子类：
+![四个抽象类的部分派生类](/img/post/IO-stream-picture.png)
+
+##### **1.2、几个输入输出流的简单应用**
+
+这里仅以文件的读取为例，给出几个简单的例子。  
+
+###### **1.2.1、InputStream**
+
+{% highlight java %}
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt";   // 文件的路径
+		FileInputStream inputStream = null;
+		byte buf[] = new byte[100];    // 存储读取的结果
+		byte b;
+		try {
+			inputStream = new FileInputStream(filepath);
+			
+			// 将输入流中最多 buf.length 的数据存储在 buf 中
+			inputStream.read(buf);
+			
+			// 从输入流中读取一个 byte 的数据
+			b = (byte)inputStream.read();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+{% endhighlight %}
+
+###### **1.2.2、OutputStream**
+
+{% highlight java %}
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt";   // 文件的路径
+		FileOutputStream outputStream = null;
+		byte buf[] = new byte[100];    // 要存储的数据
+		try {
+			outputStream = new FileOutputStream(filepath);
+			
+			// 将 buf 中的数据写入输出流
+			outputStream.write(buf);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+{% endhighlight %}
+
+###### **1.2.3、Reader**
+
+{% highlight java %}
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt";    // 文件的路径
+		FileReader reader = null;
+		char buf[] = new char[100];    // 存储读取的结果
+		char c;
+		try {
+			reader = new FileReader(filepath);
+
+			// 将输入流中最多 buf.length 的数据存储在 buf 中
+			reader.read(buf);
+
+			// 从输入流中读取一个字符
+			c = (char)reader.read();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+{% endhighlight %}
+
+###### **1.2.4、Writer**
+
+{% highlight java %}
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt";    // 文件的路径
+		FileWriter writer = null;
+		char buf[] = new char[100];     // 要存储的数据
+		try {
+			writer = new FileWriter(filepath);
+
+			// 将 buf 中的数据写入输出流
+			writer.write(buf);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+{% endhighlight %}
+
+##### **1.3、为数据流加上缓冲区后的简单实例**
+
+这几个抽象类中只提供了几个基本的数据流的操作方法，在使用时不仅显得
+麻烦，并且效率也不高。为了简化操作、提高效率，在 java.io 包中提供了一
+些带缓冲区的子类，在他们的构造函数中传入相应的数据流。这相当于对简
+单的数据流进行了一层包装。依旧以文件的读写为例。
+
+###### **1.3.1、BufferedInputStream**
+
+这是对`InputStream`的包装。
+{% highlight java %}
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt";    // 文件的路径
+		BufferedInputStream buffer = null;
+		byte buf[] = new byte[100];    // 存储读取的结果
+		try {
+			buffer = new BufferedInputStream(new FileInputStream(filepath));
+			
+			// 将输入流中最多 buf.length 的数据存储在 buf 中
+			buffer.read(buf);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+{% endhighlight %}
+
+###### **1.3.2、BufferedOutputStream**
+
+这是对`OutputStream`的包装。
+{% highlight java %}
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt";    // 文件的路径
+		BufferedOutputStream buffer = null;
+		byte buf[] = new byte[100];    // 要存储的数据
+		try {
+			buffer = new BufferedOutputStream(new FileOutputStream(filepath));
+			buffer.write(buf);    // 将 buf 中的数据写入缓冲区
+			buffer.flush();    // 将缓冲区的数据写入输出流
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+{% endhighlight %}
+
+###### **1.3.3、BufferedReader**
+
+这是对`Reader`的包装。
+{% highlight java %}
+// 以按行（每行都是一个String）读入为例
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt";    // 文件的路径
+		BufferedReader buffer = null;
+		List<String> buf = new ArrayList<>();    // 存储读入的数据
+		try {
+			buffer = new BufferedReader(new FileReader(filepath));
+			
+			// 按行读取缓冲区中的数据
+			String line = null;
+			while((line=buffer.readLine())!=null) {
+				buf.add(line);
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+{% endhighlight %}
+
+###### **1.3.4、BufferedWriter**
+
+这是对`Writer`的包装。
+{% highlight java %}
+// 以按行输入（每行是一个String）为例
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt";    // 文件的路径
+		BufferedWriter buffer = null;
+		List<String> buf = new ArrayList<>();    // 要存储的数据
+		try {
+			buffer = new BufferedWriter(new FileWriter(filepath));
+			
+			// 按行将数据写入缓冲区
+			for(String string: buf) {
+				buffer.write(string);
+			}
+			buffer.flush();   // 将数据写入输出流
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+{% endhighlight %}
+
+#### **2、java.util.Scanner 的一点理解**
+##### **2.1、Scanner 概览**
+
+这个类是自 jdk5 开始加入的一个对 java I/O 
+的包装类。在这个类中，封装了非常丰富的方法，不仅能够用来读写数据，
+还能对数据进行简单的解析。比如说，从文件读入一个字符串，可以直接调
+用该类提供的`nextInt`方法将这个字符串解析为一个 int 
+类型的数据（前提是读入的这个字符串是表示的一个 int 
+类型数据），当然，读入前可以用`hasNextInt`来判断将要读入的这个字符
+串是否能够解释为一个 int 类型的数据。  
+
+不过，这个类只能用来读取数据，存在很大的限制。在创建实例时，只需要
+传入一个目的地（例如文件`File`、标准输入设备`System.in`等），然后会
+自动打开一个输入流。
+
+##### **2.2、简单的示例**
+
+{% highlight java %}
+// 以读入一行字符串为例
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt";   // 文件的路径
+		Scanner scanner = null;
+		List<String> buf = new ArrayList<>();   // 存储结果
+		try {
+			scanner = new Scanner(new File(filepath));
+			
+			// 按行读取数据
+			while (scanner.hasNext()) {
+				buf.add(scanner.nextLine());
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} finally {
+			scanner.close();
+		}
+	}
+}
+{% endhighlight %}
+
+#### **3、Java NIO 的一点理解**
+
+一般而言，Java 程序是运行在 JVM (Java Virtual Machine) 上的。JVM 
+提供了一个统一的操作环境，对操作系统提供的服务做了一些封装，带来的
+好处就是相同的代码可以很容易在不同的平台上执行，坏处就是关于操作系
+统的一些特性被拒之门外，使得代码的性能受到影响。Java I/O 
+就是一个例子。为了解决这一问题，java.nio 
+软件包提供了新的抽象。具体地说，就是`Channel`和`Selector`类。其中，
+`Selector`是用来管理多个`Channel`的，主要在提高并发行方面有出色的表
+现。
+
+其实，Java NIO 
+本质上就是关注在并发上的性能，例如在服务器上的 socket 
+的读写因此得到极大的性能提升，对于普通的文件操作并没有很明显的性能
+方面的提升，反而在文本文件的操作上显得有点累赘。因此，这里我仅仅讲
+讲`Channel`的概念和使用。
+
+##### **3.1、Channel 和 Buffer**
+
+**什么是`Channel`?**
+
+`Channel`类似于`java.io`中的流的概念，具体的说，它模拟底层 I/O 
+实现中的数据传输的通道。和流不同的是，它是双向传输的，同一个`Channe
+l`既可以用于写数据，也可以用于读数据，显得很是灵活。但是它不能够单
+独使用，必须和`Buffer`配合，才能实现数据的读写。
+
+**那么什么是`Buffer`呢？**
+
+`Buffer`是一个对象，它模拟了读写数据的缓冲区，存储着要写入或者是读
+出的数据。它一段连接着`Channel`，一端连接着客户端程序。
+
+关于两者的关系，我们可以看看一段来自《Thinking in 
+Java》中的比喻：我们可以把它想象成一个煤矿，通道是一个包含煤层（数
+据）的矿藏，而缓冲器则是派送到矿藏的卡车。卡车载满煤炭而归，我们再
+从卡车上获得煤炭。也就是说，我们并没有直接和通道交互；我们只是和缓
+冲器交互，并把缓冲器派送到通道。通道要么从缓冲器获得数据，要么向缓
+冲器发送数据。
+
+这么看来，`Channel`和`Buffer`和`java.io`包中的带缓冲区的流在结构上
+是十分相似的：在读取数据的时候，先利用`Channel`将 IO 
+设备中的数据读取到`Buffer`，然后从`Buffer`中读取，在写入数据的时候
+，先将数据写入到`Buffer`，然后`Buffer`中的数据再通过`Channel`写到 
+IO 设备中。
+
+##### **3.2、一个实例**
+
+下面以文件的读写为例，使用`Channel`和`Buffer`进行读写。
+
+{% highlight java %}
+public class test {
+	public static void main(String[] args) {
+		String filepath = "src/factory/test.txt"; // 文件的路径
+		Path path = Paths.get(filepath);
+		try {
+			writeToFile(path);
+			readFromFile(path);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void writeToFile(Path path) throws IOException {
+		byte[] buf = null;  // 要写入的数据
+		ByteBuffer buffer = ByteBuffer.allocate(buf.length);  // 申请缓冲区大小
+		FileChannel channel = FileChannel.open(path);
+		buffer.put(buf);    // 将数据写入缓冲区
+		buffer.flip();    // 标记缓冲区中的有效数据
+		channel.write(buffer);
+		channel.close();
+	}
+	
+	private static void readFromFile(Path path) throws IOException {
+		FileChannel channel = FileChannel.open(path);
+		ByteBuffer buffer = ByteBuffer.allocate(1024);
+		while(channel.read(buffer)!=-1) {
+			System.out.write(buffer.array());
+			buffer.clear();   // 清空缓冲区
+		}
+	}
+}
+{% endhighlight %}
+
+值得注意的是，在将数据写入`Channel`之前调用了方法`buffer.flip();`，
+这个方法的效果就是标记出当前缓冲区中的有效字符，之后就将这些有效字
+符写入`Channel`。在多次从`Channel`中读取数据到缓冲区前调用了`buffer
+.clear()`方法，这个方法的效果是将缓冲区标记为空。这两个方法分别在写
+和读之前调用。
+
+事实上，这个两个方法的具体行为和`Buffer`的内部结构有关，它内部有三
+个标记变量：
+* 1) capacity：表示缓冲区的大小；
+* 2) 
+position：表示当前缓冲区中最后一个有效字符的后一个位置（在调用`flip
+()`后为第一个有效字符的位置，也就是0，这是为写入`Channel`做准备）；
+* 3) limit：初始和调用`clear()`时等于 capacity，表示在 position 
+和 limit 
+之间的缓冲区可用，在调用`flip()`后为最后一个有效字符的位置，表示在 
+position 和 limit 之间是将要写入`Channel`的有效字符；
+
+#### **4、用 Files 类进行文件操作**
+
+从上面的例子中可以看出，`Buffer`和`Channel`对文件操作十分不友好，甚至不如直接使
+用`Stream`类进行操作。幸而，在 Java NIO 
+中，提供了一个`Files`类，位于`java.nio.file.Files`，封装了十分丰富的文件操作，包
+括但不限于文件的读写，文件的删除、新建、移动、拷贝等，操作十分简单。下面给出一个
+文件按行读写的例子。
+
+{% highlight java %}
+public class test {
+	public static void main(String[] args) throws IOException {
+		String filepath = "src/factory/test10.txt"; // 文件的路径
+		Path path = Paths.get(filepath);
+		writeToFile(path);
+		readFromFile(path);
+	}
+
+	private static void writeToFile(Path path) throws IOException {
+		List<String> data = null;   // 将要写入文件的数据
+		Files.write(path, data);
+	}
+
+	private static void readFromFile(Path path) throws IOException {
+		List<String> data = Files.readAllLines(path);
+	}
+}
+{% endhighlight %}
+
+#### **5、参考**
+[【1】Java NIO 之 Channel 和 Buffer](https://www.jianshu.com/p/e20f54672865)  
+[【2】Java NIO 读取文件、写入文件、读取写入混合](https://blog.csdn.net/wangjun5159/article/details/50020351)  
+[【3】java NIO详解](http://www.importnew.com/22623.html)  
+[【4】Java I/O 总结](http://www.importnew.com/23708.html)  
+
+
+
+
+
